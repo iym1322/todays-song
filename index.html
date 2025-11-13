@@ -263,30 +263,46 @@
   }
 
   function shareToX() {
-    if (!currentSong) {
-      alert("まず『今日の一曲を選ぶ』を押してください。");
-      return;
-    }
-
-    const baseText =
-      "🎵 今日の一曲\n" +
-      currentSong.title +
-      (currentSong.artist ? " / " + currentSong.artist : "") +
-      "\n";
-
-    const url = currentSong.url || window.location.href;
-    const tagsInput = document.getElementById("hashtags").value.trim();
-
-    const tweetUrl = new URL("https://twitter.com/intent/tweet");
-    tweetUrl.searchParams.set("text", baseText);
-    tweetUrl.searchParams.set("url", url);
-    if (tagsInput !== "") {
-      tweetUrl.searchParams.set("hashtags", tagsInput);
-    }
-
-    window.open(tweetUrl.toString(), "_blank");
+  if (!currentSong) {
+    alert("まず『今日の一曲を選ぶ』を押してください。");
+    return;
   }
+
+  const siteUrl = "https://iym1322.github.io/todays-song/"; // あなたのサイトURL
+
+  // サイト紹介 + 今日の一曲
+  const introText =
+    "🎵 今日の一曲をランダムで引けるサイト\n" +
+    siteUrl + "\n\n";
+
+  const songText =
+    "今日の一曲：\n" +
+    currentSong.title +
+    (currentSong.artist ? " / " + currentSong.artist : "") +
+    "\n" +
+    (currentSong.url || "");
+
+  const fullText = introText + songText;
+
+  const tagsInput = document.getElementById("hashtags").value.trim();
+
+  const tweetUrl = new URL("https://twitter.com/intent/tweet");
+  tweetUrl.searchParams.set("text", fullText);
+
+  // url パラメータにも曲URLを入れておく（クリック用）
+  if (currentSong.url) {
+    tweetUrl.searchParams.set("url", currentSong.url);
+  }
+
+  if (tagsInput !== "") {
+    tweetUrl.searchParams.set("hashtags", tagsInput);
+  }
+
+  window.open(tweetUrl.toString(), "_blank");
+}
+
 </script>
 </body>
 </html>
+
 
