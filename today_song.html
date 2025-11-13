@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>今日の一曲メーカー（CSV版）</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #111;
+      color: #f5f5f5;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      min-height: 100vh;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      max-width: 560px;
+      width: 94%;
+      background: #1b1b1b;
+      border-radius: 16px;
+      padding: 20px 18px 26px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    }
+    h1 {
+      font-size: 20px;
+      margin: 0 0 6px;
+      text-align: center;
+    }
+    .subtitle {
+      font-size: 12px;
+      color: #aaa;
+      margin-bottom: 10px;
+      text-align: center;
+      line-height: 1.5;
+    }
+    .row {
+      margin-bottom: 10px;
+      font-size: 12px;
+    }
+    input[type="file"] {
+      font-size: 12px;
+      width: 100%;
+    }
+    input[type="text"] {
+      width: 100%;
+      border-radius: 999px;
+      border: 1px solid #333;
+      padding: 6px 10px;
+      font-size: 12px;
+      background: #111;
+      color: #f5f5f5;
+      box-sizing: border-box;
+    }
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 8px 18px;
+      font-size: 13px;
+      cursor: pointer;
+      margin: 4px 4px 0;
+    }
+    .btn-main {
+      background: #1d9bf0;
+      color: #fff;
+      font-weight: 600;
+    }
+    .btn-main:active {
+      transform: translateY(1px);
+    }
+    .btn-sub {
+      background: #333;
+      color: #f5f5f5;
+      font-weight: 500;
+    }
+    .btn-share {
+      background: #fff;
+      color: #111;
+      font-weight: 600;
+      padding: 8px 16px;
+    }
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 4px;
+      margin-bottom: 12px;
+    }
+    .song-card {
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 12px;
+      background: #111;
+      border: 1px solid #333;
+    }
+    .thumb-wrapper {
+      width: 100%;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 8px;
+      background: #222;
+      aspect-ratio: 16 / 9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: #777;
+    }
+    .thumb-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .song-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+    .song-artist {
+      font-size: 13px;
+      color: #ccc;
+      margin-bottom: 6px;
+    }
+    .song-link a {
+      font-size: 12px;
+      color: #1d9bf0;
+      word-break: break-all;
+    }
+    .share-wrapper {
+      margin-top: 10px;
+      text-align: center;
+    }
+    .notice {
+      font-size: 11px;
+      color: #777;
+      margin-top: 8px;
+      line-height: 1.5;
+      text-align: center;
+    }
+    label {
+      display: block;
+      margin-bottom: 4px;
+      color: #ddd;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>🎵 今日の一曲メーカー（CSV版）</h1>
+  <div class="subtitle">
+    A列: 曲名 / B列: アーティスト名 / C列: YouTube URL の CSV を読み込みます。<br>
+    一度読み込むと、このブラウザに曲リストが保存されます。
+  </div>
+
+  <div class="row">
+    <label for="file-input">曲リストCSV（.csv）</label>
+    <input type="file" id="file-input" accept=".csv" />
+  </div>
+
+  <div class="row">
+    <label for="hashtags">
+      Xに付けるハッシュタグ（カンマ区切り） 例：<code>SoundSchedule,今日の一曲</code>
+    </label>
+    <input type="text" id="hashtags" placeholder="アーティスト名,今日の一曲" />
+  </div>
+
+  <div class="btn-row">
+    <button class="btn-sub" onclick="loadFromCSV()">CSVを読み込む</button>
+    <button class="btn-main" onclick="pickSong()">今日の一曲を選ぶ</button>
+  </div>
+
+  <div id="song-card" class="song-card" style="display:none;">
+    <div class="thumb-wrapper" id="thumb-box">
+      <span id="thumb-placeholder">♪</span>
+      <img id="song-thumb" src="" alt="" style="display:none;" />
+    </div>
+    <div class="song-title" id="song-title"></div>
+    <div class="song-artist" id="song-artist"></div>
+    <div class="song-link" id="song-link"></div>
+
+    <div class="share-wrapper">
+      <button class="btn-share" onclick="shareToX()">
+        Xで共有
+      </button>
+    </div>
+  </div>
+
+  <div class="notice">
+    ※ 曲リストとハッシュタグはこのブラウザ内（ローカルストレージ）に保存されます。<br>
+    ※ 曲を追加したらCSVを更新して、もう一度「CSVを読み込む」を押せばOKです。
+  </div>
+</div>
+
+<!-- CSVをパースするライブラリ（PapaParse） -->
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script>
+  const LS_KEY_SONGS = "todays_songs_from_csv_v1";
+  const LS_KEY_TAGS  = "todays_songs_tags_v1";
+
+  let songs = [];
+  let currentSong = null;
+
+  // 起動時：保存済みデータがあれば復元
+  window.addEventListener("DOMContentLoaded", () => {
+    const saved = localStorage.getItem(LS_KEY_SONGS);
+    if (saved) {
+      try { songs = JSON.parse(saved); } catch(e) { songs = []; }
+    }
+    const savedTags = localStorage.getItem(LS_KEY_TAGS);
+    if (savedTags) {
+      document.getElementById("hashtags").value = savedTags;
+    }
+  });
+
+  function loadFromCSV() {
+    const fileInput = document.getElementById("file-input");
+    const file = fileInput.files[0];
+    if (!file) {
+      alert("読み込む CSV ファイルを選択してください。");
+      return;
+    }
+
+    Papa.parse(file, {
+      complete: function(results) {
+        const rows = results.data;
+        const parsed = [];
+
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || row.length === 0) continue;
+
+          let title  = (row[0] || "").toString().trim();
+          let artist = (row[1] || "").toString().trim();
+          let url    = (row[2] || "").toString().trim();
+
+          if (!title || title === "曲名" || title === "Title") continue;
+
+          parsed.push({ title, artist, url });
+        }
+
+        if (parsed.length === 0) {
+          alert("有効な行が見つかりませんでした。A列: 曲名 / B列: アーティスト名 / C列: URL になっているか確認してください。");
+          return;
+        }
+
+        songs = parsed;
+        localStorage.setItem(LS_KEY_SONGS, JSON.stringify(songs));
+
+        const tags = document.getElementById("hashtags").value.trim();
+        localStorage.setItem(LS_KEY_TAGS, tags);
+
+        alert("CSVから " + songs.length + " 件の曲を読み込みました！（このブラウザに保存されました）");
+      },
+      error: function(err) {
+        console.error(err);
+        alert("CSVの読み込み中にエラーが発生しました。");
+      },
+      skipEmptyLines: true
+    });
+  }
+
+  function getYouTubeId(url) {
+    if (!url) return null;
+    const shortMatch = url.match(/youtu\.be\/([A-Za-z0-9_-]{11})/);
+    if (shortMatch) return shortMatch[1];
+    const longMatch = url.match(/[?&]v=([A-Za-z0-9_-]{11})/);
+    if (longMatch) return longMatch[1];
+    return null;
+  }
+
+  function pickSong() {
+    if (!songs || songs.length === 0) {
+      alert("まだ曲リストが読み込まれていません。まず『CSVを読み込む』を押してください。");
+      return;
+    }
+
+    const i = Math.floor(Math.random() * songs.length);
+    const song = songs[i];
+    currentSong = song;
+
+    document.getElementById("song-title").textContent = song.title;
+    document.getElementById("song-artist").textContent = song.artist || "";
+
+    const linkBox = document.getElementById("song-link");
+    linkBox.innerHTML = "";
+    if (song.url) {
+      const a = document.createElement("a");
+      a.href = song.url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = song.url;
+      linkBox.appendChild(a);
+    }
+
+    const thumbImg = document.getElementById("song-thumb");
+    const placeholder = document.getElementById("thumb-placeholder");
+    const ytId = getYouTubeId(song.url);
+
+    if (ytId) {
+      thumbImg.src = "https://img.youtube.com/vi/" + ytId + "/hqdefault.jpg";
+      thumbImg.style.display = "block";
+      placeholder.style.display = "none";
+    } else {
+      thumbImg.src = "";
+      thumbImg.style.display = "none";
+      placeholder.style.display = "block";
+      placeholder.textContent = "♪";
+    }
+
+    document.getElementById("song-card").style.display = "block";
+  }
+
+  function shareToX() {
+    if (!currentSong) {
+      alert("まず『今日の一曲を選ぶ』を押してください。");
+      return;
+    }
+
+    const baseText =
+      "🎵 今日の一曲\n" +
+      currentSong.title +
+      (currentSong.artist ? " / " + currentSong.artist : "") +
+      "\n";
+
+    const url = currentSong.url || window.location.href;
+    const tagsInput = document.getElementById("hashtags").value.trim();
+    localStorage.setItem(LS_KEY_TAGS, tagsInput);
+
+    const tweetUrl = new URL("https://twitter.com/intent/tweet");
+    tweetUrl.searchParams.set("text", baseText);
+    tweetUrl.searchParams.set("url", url);
+    if (tagsInput !== "") {
+      tweetUrl.searchParams.set("hashtags", tagsInput);
+    }
+
+    window.open(tweetUrl.toString(), "_blank");
+  }
+</script>
+</body>
+</html>
