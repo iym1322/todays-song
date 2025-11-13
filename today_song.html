@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>今日の一曲メーカー（CSV版）</title>
+  <title>今日の一曲メーカー</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body {
@@ -40,10 +40,6 @@
       margin-bottom: 10px;
       font-size: 12px;
     }
-    input[type="file"] {
-      font-size: 12px;
-      width: 100%;
-    }
     input[type="text"] {
       width: 100%;
       border-radius: 999px;
@@ -69,11 +65,6 @@
     }
     .btn-main:active {
       transform: translateY(1px);
-    }
-    .btn-sub {
-      background: #333;
-      color: #f5f5f5;
-      font-weight: 500;
     }
     .btn-share {
       background: #fff;
@@ -149,26 +140,20 @@
 </head>
 <body>
 <div class="container">
-  <h1>🎵 今日の一曲メーカー（CSV版）</h1>
+  <h1>🎵 今日の一曲メーカー</h1>
   <div class="subtitle">
-    A列: 曲名 / B列: アーティスト名 / C列: YouTube URL の CSV を読み込みます。<br>
-    一度読み込むと、このブラウザに曲リストが保存されます。
-  </div>
-
-  <div class="row">
-    <label for="file-input">曲リストCSV（.csv）</label>
-    <input type="file" id="file-input" accept=".csv" />
+    ページを開いて「今日の一曲を選ぶ」を押すだけ。<br>
+    曲リストは管理人のみが更新できます。
   </div>
 
   <div class="row">
     <label for="hashtags">
       Xに付けるハッシュタグ（カンマ区切り） 例：<code>SoundSchedule,今日の一曲</code>
     </label>
-    <input type="text" id="hashtags" placeholder="アーティスト名,今日の一曲" />
+    <input type="text" id="hashtags" placeholder="SoundSchedule,今日の一曲" />
   </div>
 
   <div class="btn-row">
-    <button class="btn-sub" onclick="loadFromCSV()">CSVを読み込む</button>
     <button class="btn-main" onclick="pickSong()">今日の一曲を選ぶ</button>
   </div>
 
@@ -189,78 +174,44 @@
   </div>
 
   <div class="notice">
-    ※ 曲リストとハッシュタグはこのブラウザ内（ローカルストレージ）に保存されます。<br>
-    ※ 曲を追加したらCSVを更新して、もう一度「CSVを読み込む」を押せばOKです。
+    ※ 曲リストは <code>songs.csv</code> から読み込まれます。<br>
+    ※ 一般ユーザーはリストを変更できません（管理人のみCSV更新）。
   </div>
 </div>
 
-<!-- CSVをパースするライブラリ（PapaParse） -->
+<!-- CSVパーサ -->
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script>
-  const LS_KEY_SONGS = "todays_songs_from_csv_v1";
-  const LS_KEY_TAGS  = "todays_songs_tags_v1";
-
   let songs = [];
   let currentSong = null;
 
-  // 起動時：保存済みデータがあれば復元
+  // ページ読み込み時に songs.csv を取得
   window.addEventListener("DOMContentLoaded", () => {
-    const saved = localStorage.getItem(LS_KEY_SONGS);
-    if (saved) {
-      try { songs = JSON.parse(saved); } catch(e) { songs = []; }
-    }
-    const savedTags = localStorage.getItem(LS_KEY_TAGS);
-    if (savedTags) {
-      document.getElementById("hashtags").value = savedTags;
-    }
-  });
-
-  function loadFromCSV() {
-    const fileInput = document.getElementById("file-input");
-    const file = fileInput.files[0];
-    if (!file) {
-      alert("読み込む CSV ファイルを選択してください。");
-      return;
-    }
-
-    Papa.parse(file, {
-      complete: function(results) {
-        const rows = results.data;
+    fetch("songs.csv")
+      .then(res => {
+        if (!res.ok) throw new Error("songs.csv が読み込めませんでした");
+        return res.text();
+      })
+      .then(text => {
+        const result = Papa.parse(text, {
+          skipEmptyLines: true
+        });
         const parsed = [];
-
-        for (let i = 0; i < rows.length; i++) {
-          const row = rows[i];
-          if (!row || row.length === 0) continue;
-
-          let title  = (row[0] || "").toString().trim();
-          let artist = (row[1] || "").toString().trim();
-          let url    = (row[2] || "").toString().trim();
-
+        for (const row of result.data) {
+          const title  = (row[0] || "").toString().trim();
+          const artist = (row[1] || "").toString().trim();
+          const url    = (row[2] || "").toString().trim();
           if (!title || title === "曲名" || title === "Title") continue;
-
           parsed.push({ title, artist, url });
         }
-
-        if (parsed.length === 0) {
-          alert("有効な行が見つかりませんでした。A列: 曲名 / B列: アーティスト名 / C列: URL になっているか確認してください。");
-          return;
-        }
-
         songs = parsed;
-        localStorage.setItem(LS_KEY_SONGS, JSON.stringify(songs));
-
-        const tags = document.getElementById("hashtags").value.trim();
-        localStorage.setItem(LS_KEY_TAGS, tags);
-
-        alert("CSVから " + songs.length + " 件の曲を読み込みました！（このブラウザに保存されました）");
-      },
-      error: function(err) {
+        console.log("Loaded songs:", songs.length);
+      })
+      .catch(err => {
         console.error(err);
-        alert("CSVの読み込み中にエラーが発生しました。");
-      },
-      skipEmptyLines: true
-    });
-  }
+        alert("曲リスト（songs.csv）の読み込みに失敗しました。管理人にお問い合わせください。");
+      });
+  });
 
   function getYouTubeId(url) {
     if (!url) return null;
@@ -273,10 +224,9 @@
 
   function pickSong() {
     if (!songs || songs.length === 0) {
-      alert("まだ曲リストが読み込まれていません。まず『CSVを読み込む』を押してください。");
+      alert("まだ曲リストが読み込まれていません。少し待ってから再度お試しください。");
       return;
     }
-
     const i = Math.floor(Math.random() * songs.length);
     const song = songs[i];
     currentSong = song;
@@ -298,7 +248,6 @@
     const thumbImg = document.getElementById("song-thumb");
     const placeholder = document.getElementById("thumb-placeholder");
     const ytId = getYouTubeId(song.url);
-
     if (ytId) {
       thumbImg.src = "https://img.youtube.com/vi/" + ytId + "/hqdefault.jpg";
       thumbImg.style.display = "block";
@@ -327,7 +276,6 @@
 
     const url = currentSong.url || window.location.href;
     const tagsInput = document.getElementById("hashtags").value.trim();
-    localStorage.setItem(LS_KEY_TAGS, tagsInput);
 
     const tweetUrl = new URL("https://twitter.com/intent/tweet");
     tweetUrl.searchParams.set("text", baseText);
@@ -341,3 +289,4 @@
 </script>
 </body>
 </html>
+
